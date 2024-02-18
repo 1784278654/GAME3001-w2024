@@ -1,6 +1,12 @@
+using JetBrains.Annotations;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
+using Unity.VisualScripting;
+using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
+using Color = UnityEngine.Color;
 
 public enum TileType : int
 {
@@ -14,9 +20,10 @@ public class Grid : MonoBehaviour
 {
     [SerializeField] GameObject tilePrefab;
     List<List<GameObject>> grid = new List<List<GameObject>>();
+    List<List<GameObject>> neighbour = new List<List<GameObject>>();
     int rowCount = 10;      // vertical tile count
     int colCount = 20;      // horizontal tile count
-
+    int price;
     int[,] tiles =
     {
         { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -55,6 +62,28 @@ public class Grid : MonoBehaviour
             // Reset column position and increment row position when current row finishes
             x = xStart;
             y += 1.0f;
+        }
+
+        //Testing Neighbour function
+        neighbour = GetGridNeighbours(grid, 1, 1);
+        for (int row = 0; row < 3; row++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                Debug.Log(neighbour[row][col].transform.position);
+            }
+        }
+
+        //Testing Cost function
+        float[,] cost = Cost(grid);
+        for(int row = 0;row < 10; row++)
+        {
+            string s = "";
+            for(int col = 0;col < 20; col++)
+            {
+                s += cost[row, col] + " ";
+            }
+            Debug.Log(s);
         }
     }
 
@@ -124,5 +153,69 @@ public class Grid : MonoBehaviour
     void Update()
     {
         ColorGrid();
+    }
+
+    List<List<GameObject>> GetGridNeighbours(List<List<GameObject>> grid, int row, int column)
+    {
+        //this returns a 3x3 grid with the original grid itself, slightly different but works nontheless
+        //row/column are all index, not starting with 1. [0,0] is first element
+        List<List<GameObject>> neighbours = new List<List<GameObject>>();
+        int newRow;
+        int newCol;
+
+        //left right up down diagonals
+        for (int r = -1; r < 2; r++)
+        {
+            neighbours.Add(new List<GameObject>());
+            for (int c = -1; c < 2; c++)
+            {
+                newRow = row + r;
+                newCol = column + c;
+                if (newRow >= 0 && newRow < grid.Count && newCol >= 0 && newCol < grid[newRow].Count)
+                {
+                    neighbours[r + 1].Add(grid[newRow][newCol]);
+                }
+                else
+                {
+                    // If the position is out of bounds, add null to indicate there's no neighbor
+                    neighbours[r + 1].Add(null);
+                }
+            }
+        }
+        
+        return neighbours;
+    }
+
+    float[,] Cost(List<List<GameObject>> grid)
+    {
+        //not sure the exact meaning of the cost thing, or the definition. Terriblly explained in instruction with few description
+        float[,] cost = new float[10,20];
+        //goal tile is [10, 20]
+        for (int row = 0; row < rowCount; row++)
+        {
+            for (int col = 0; col < colCount; col++)
+            {
+                switch ((TileType)tiles[row, col])
+                {
+                    case TileType.GRASS:
+                        price = 5;
+                        break;
+
+                    case TileType.WATER:
+                        price = 1; 
+                        break;
+
+                    case TileType.MUD:
+                        price = 10; 
+                        break;
+
+                    case TileType.STONE:
+                        price = 20; 
+                        break;
+                }
+                cost[row, col] = price + Mathf.Sqrt((10f - row)*(10f - row) + (20f - col)* (20f - col));
+            }
+        }
+        return cost;
     }
 }
